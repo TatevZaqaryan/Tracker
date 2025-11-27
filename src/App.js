@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+
 import {
-  Chart as ChartJS,
+  
   CategoryScale,
   LinearScale,
   PointElement,
@@ -8,7 +9,7 @@ import {
   Title,
   Tooltip,
   Legend
-} from 'chart.js';
+} from 'chart.js/auto';
 import { Line } from 'react-chartjs-2';
 
 ChartJS.register(
