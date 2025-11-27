@@ -1,17 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
-
 import { Line } from 'react-chartjs-2';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+// Chart.js registration
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
 // ---------- Configuration / Defaults ----------
 const DEFAULT_HABITS = [
@@ -34,7 +26,16 @@ export default function App() {
   const [data, setData] = useState({});
   const [showHelp, setShowHelp] = useState(false);
 
-  // Load from localStorage on mount
+  // Initialize month data
+  const initDefaultMonth = useCallback(() => {
+    const initData = {};
+    DEFAULT_HABITS.forEach(h => (initData[h.id] = {}));
+    setHabits(DEFAULT_HABITS);
+    setData(initData);
+    localStorage.setItem(getStorageKey(year, month), JSON.stringify({ habits: DEFAULT_HABITS, data: initData }));
+  }, [year, month]);
+
+  // Load from localStorage on mount / when year/month changes
   useEffect(() => {
     const key = getStorageKey(year, month);
     const raw = localStorage.getItem(key);
@@ -50,15 +51,7 @@ export default function App() {
     } else {
       initDefaultMonth();
     }
-  }, [year, month]);
-
-  function initDefaultMonth() {
-    const initData = {};
-    DEFAULT_HABITS.forEach(h => (initData[h.id] = {}));
-    setHabits(DEFAULT_HABITS);
-    setData(initData);
-    localStorage.setItem(getStorageKey(year, month), JSON.stringify({ habits: DEFAULT_HABITS, data: initData }));
-  }
+  }, [year, month, initDefaultMonth]);
 
   // Persist changes
   useEffect(() => {
@@ -66,31 +59,31 @@ export default function App() {
     localStorage.setItem(key, JSON.stringify({ habits, data }));
   }, [habits, data, year, month]);
 
-  function toggleDay(habitId, day) {
+  const toggleDay = (habitId, day) => {
     setData(prev => {
       const copy = { ...prev };
       if (!copy[habitId]) copy[habitId] = {};
       copy[habitId][day] = !copy[habitId][day];
       return copy;
     });
-  }
+  };
 
-  function addHabit(name) {
+  const addHabit = (name) => {
     const id = Date.now();
     const color = randomColor();
     const newHabit = { id, name, color };
     setHabits(prev => [...prev, newHabit]);
     setData(prev => ({ ...prev, [id]: {} }));
-  }
+  };
 
-  function removeHabit(id) {
+  const removeHabit = (id) => {
     setHabits(prev => prev.filter(h => h.id !== id));
     setData(prev => {
       const copy = { ...prev };
       delete copy[id];
       return copy;
     });
-  }
+  };
 
   const monthNames = useMemo(() => [
     'January','February','March','April','May','June','July','August','September','October','November','December'
@@ -135,20 +128,12 @@ export default function App() {
 
             <AddHabitForm onAdd={addHabit} />
 
-            <div style={{ marginTop: 12 }} className="legend-row">
-              <div className="legend-item"><strong>Weekly colors</strong></div>
-              <div className="legend-item"><span style={{ width:12,height:12,display:'inline-block',background:'#e8f5e9',borderRadius:6 }} /> Week 1</div>
-              <div className="legend-item"><span style={{ width:12,height:12,display:'inline-block',background:'#e3f2fd',borderRadius:6 }} /> Week 2</div>
-              <div className="legend-item"><span style={{ width:12,height:12,display:'inline-block',background:'#fff3e0',borderRadius:6 }} /> Week 3</div>
-              <div className="legend-item"><span style={{ width:12,height:12,display:'inline-block',background:'#f3e5f5',borderRadius:6 }} /> Week 4+</div>
-            </div>
-
             {showHelp && (
               <div style={{ marginTop:12 }} className="help panel">
                 <p><strong>How it works:</strong></p>
                 <ul>
                   <li>Click on a day cell to toggle completion for that habit.</li>
-                  <li>Data is saved locally (localStorage) per month. Switch months with ◀ ▶.</li>
+                  <li>Data is saved locally per month. Switch months with ◀ ▶.</li>
                   <li>Add or remove habits. Progress and chart update automatically.</li>
                 </ul>
               </div>
@@ -175,13 +160,13 @@ export default function App() {
       </main>
 
       <footer>
-        <small>Saved locally in your browser (localStorage). To sync across devices, connect a backend.</small>
+        <small>Saved locally in your browser (localStorage).</small>
       </footer>
     </div>
   );
 }
 
-// ---------- Helper components ----------
+// ---------- Helper components & utils ----------
 function AddHabitForm({ onAdd }) {
   const [text, setText] = useState('');
   return (
@@ -219,9 +204,7 @@ function HabitGrid({ year, month, habits, data, onToggle }) {
       <thead>
         <tr>
           <th>Habit \\ Day</th>
-          {Array.from({ length: daysInMonth }).map((_, i) => (
-            <th key={i+1}>{i+1}</th>
-          ))}
+          {Array.from({ length: daysInMonth }).map((_, i) => <th key={i+1}>{i+1}</th>)}
           <th>Month %</th>
         </tr>
       </thead>
